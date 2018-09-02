@@ -1,7 +1,6 @@
 
-//Class definition of a particle
-const MAX_SPEED = 5;
-const MAX_FORCE = 1;
+//Class definition of a vehicle
+
 let gravity = false;
 let grv_cons = 0.05;
 let drg_cons = 0.005;
@@ -17,6 +16,9 @@ class Vehicle {
         this.mass = mass;
         this.radius = mass;
         this.lifespan = lifespan;
+        this.MAX_SPEED = 10;
+        this.MAX_FORCE = 0.8;
+        this.colour = "green";
         // print(this);
     }
 
@@ -39,7 +41,7 @@ class Vehicle {
         this.pos.add(this.vel);
 
         //limit the speed
-        this.vel.limit(MAX_SPEED);
+        // this.vel.limit(this.MAX_SPEED);
 
         // add border
         // this.addBorder();
@@ -47,7 +49,7 @@ class Vehicle {
         // dont accumulate accelaration over frames
         this.acc.mult(0);
 
-        
+
         // decrese lifespan
         // this.lifespan-=5;
 
@@ -66,36 +68,89 @@ class Vehicle {
     // }
 
     // A method that calculates a steering force towards a target
-    // STEER = DESIRED MINUS VELOCITY
+    // STEER = DESIRED - VELOCITY
     seek(target) {
-        let desired = target.sub(this.pos);  // A vector pointing from the position to the target
-        
-        // Scale to maximum speed
-        desired.setMag(MAX_SPEED);
+        // A vector pointing from the position to the target
+        let desired = p5.Vector.sub(target.pos, this.pos);
+
+        let distance = desired.mag();
+
+        if (distance < this.MAX_SPEED * 100) {
+            let m = map(distance, 0, this.MAX_SPEED * 100, 0, this.MAX_SPEED);
+            desired.setMag(m);
+        }
+        else {
+            // Scale to maximum speed
+            desired.setMag(this.MAX_SPEED);
+        }
 
         // Steering = Desired minus velocity
-        let steer = desired.sub(this.vel);
-        steer.limit(MAX_FORCE);  // Limit to maximum steering force
-        
+        let steer = p5.Vector.sub(desired, this.vel);
+
+        steer.add(target.vel); // consider targets velocity
+
+        steer.limit(this.MAX_FORCE);  // Limit to maximum steering force
+
         this.applyForce(steer);
+
+        this.dontHitWalls();
+
+    }
+
+    dontHitWalls() {
+
+        let dist_to_below = Math.abs(this.pos.y - height);
+        let dist_to_up = Math.abs(this.pos.y);
+        let dist_to_right = Math.abs(this.pos.x - width);
+        let dist_to_left = Math.abs(this.pos.x);
+
+        let limit_dist = 50;
+        let maxforce = 5;
+
+        if (dist_to_below < limit_dist) {
+            let forcetoapply = map(dist_to_below, 0, limit_dist, 0, maxforce);
+            this.applyForce(createVector(0, -forcetoapply));
+            print("dist_to_below: " + dist_to_below);
+        }
+        if (dist_to_up < limit_dist) {
+            let forcetoapply = map(dist_to_up, 0, limit_dist, 0, maxforce);
+            this.applyForce(createVector(0, forcetoapply));
+            print("dist_to_up: " + dist_to_up);
+        }
+        if (dist_to_right < limit_dist) {
+            let forcetoapply = map(dist_to_right, 0, limit_dist, 0, maxforce);
+            this.applyForce(createVector(-forcetoapply, 0));
+            print("dist_to_right: " + dist_to_right);
+
+        }
+        if (dist_to_left < limit_dist) {
+            let forcetoapply = map(dist_to_left, 0, limit_dist, 0, maxforce);
+            this.applyForce(createVector(forcetoapply, 0));
+            print("dist_to_left: " + dist_to_left);
+
+        }
     }
 
     display() {
         // Draw a triangle rotated in the direction of velocity
-        let theta = this.vel.heading() + PI/2;
-        fill(127);
+        let theta = this.vel.heading() + PI / 2;
+        fill(this.colour);
         stroke(0);
         strokeWeight(1);
         push();
-        translate(this.pos.x,this.pos.y);
+        translate(this.pos.x, this.pos.y);
         rotate(theta);
         beginShape();
-        vertex(0, -this.mass*2);
-        vertex(-this.mass, this.mass*2);
-        vertex(this.mass, this.mass*2);
+        vertex(0, -this.radius * 2);
+        vertex(-this.radius, this.radius * 2);
+        vertex(this.radius, this.radius * 2);
         endShape(CLOSE);
         pop();
-        
-        
-      }
+
+    }
+
+    static isCollide(target, mover) {
+        return target.radius + mover.radius > dist(target.pos.x,
+            target.pos.y, mover.pos.x, mover.pos.y);
+    }
 }
